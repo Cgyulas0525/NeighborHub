@@ -1,0 +1,105 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: neighborhub-app
+    restart: unless-stopped
+    working_dir: /var/www
+    environment:
+      SERVICE_NAME: app
+    volumes:
+      - ./backend:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - neighborhub
+
+  nginx:
+    image: nginx:alpine
+    container_name: neighborhub-nginx
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    volumes:
+      - ./backend:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+      - node
+    networks:
+      - neighborhub
+
+  node:
+    image: node:24-alpine
+    container_name: neighborhub-node
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    environment:
+      VITE_API_URL: http://localhost:8088/api
+    ports:
+      - "5174:5173"
+    networks:
+      - neighborhub
+
+  mysql:
+    image: mysql:8.0
+    container_name: neighborhub-mysql
+    restart: unless-stopped
+    ports:
+      - "3312:3306"
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-neighborhub}
+      MYSQL_USER: ${MYSQL_USER:-neighborhub}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret_root}
+    volumes:
+      - neighborhub_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "neighborhub", "-psecret"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - neighborhub
+
+  redis:
+    image: redis:alpine
+    container_name: neighborhub-redis
+    restart: unless-stopped
+    ports:
+      - "6382:6379"
+    volumes:
+      - neighborhub_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - neighborhub
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: neighborhub-mailhog
+    restart: unless-stopped
+    ports:
+      - "1030:1025"
+      - "8028:8025"
+    networks:
+      - neighborhub
+
+networks:
+  neighborhub:
+    driver: bridge
+
+volumes:
+  neighborhub_mysql_data:
+  neighborhub_redis_data:
