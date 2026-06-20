@@ -13,10 +13,13 @@ class ServiceController extends Controller
     {
         $query = Service::query()
             ->with(['profile.city', 'category', 'city'])
-            ->where('is_active', true);
+            ->where('is_active', true)
+            ->where('approval_status', 'approved')
+            ->whereHas('profile', fn ($p) => $p->where('approval_status', 'approved'));
 
         if ($request->filled('city_id')) {
-            $query->where('city_id', $request->integer('city_id'));
+            $cityId = $request->integer('city_id');
+            $query->whereHas('profile', fn ($p) => $p->where('city_id', $cityId));
         }
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->integer('category_id'));
@@ -47,9 +50,23 @@ class ServiceController extends Controller
             ...$validated,
             'slug' => ProfileController::makeSlug($validated['title'], $profile->id),
             'is_active' => true,
+            'approval_status' => 'pending',
         ]);
 
         return response()->json($service->load(['category', 'city']), 201);
+    }
+
+    public function mine(Request $request): JsonResponse
+    {
+        $profile = $request->user()->profile;
+        abort_unless($profile, 403, 'Előbb hozd létre a profilodat.');
+
+        $services = $profile->services()
+            ->with(['category:id,name', 'city:id,name'])
+            ->latest()
+            ->get();
+
+        return response()->json($services);
     }
 
     public function show(Service $service): JsonResponse

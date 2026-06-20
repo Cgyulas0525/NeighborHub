@@ -1,1 +1,25 @@
 @import "tailwindcss";
+
+@theme {
+  --color-cream: #f2f6ef;
+  --color-sand: #e4ece1;
+  --color-moss: #d8e4d4;
+}
+
+body {
+  @apply text-stone-900 antialiased;
+  background-color: var(--color-cream);
+  background-image:
+    radial-gradient(ellipse 100% 70% at 50% -15%, rgb(196 218 188 / 0.45), transparent 50%),
+    linear-gradient(180deg, var(--color-cream) 0%, var(--color-sand) 55%, var(--color-moss) 100%);
+  min-height: 100vh;
+}
+
+@media (min-width: 768px) {
+  body {
+    background-image:
+      radial-gradient(ellipse 90% 55% at 15% 0%, rgb(180 210 170 / 0.35), transparent 55%),
+      radial-gradient(ellipse 70% 50% at 85% 10%, rgb(196 218 188 / 0.3), transparent 50%),
+      linear-gradient(180deg, var(--color-cream) 0%, var(--color-sand) 50%, #dde8d9 100%);
+  }
+}

@@ -3,17 +3,52 @@
 namespace App\Http\Controllers;
 
 use App\Models\Profile;
+use App\Support\ProfileAvatarGenerator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Support\Str;
 
 class ProfileController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $query = Profile::query()
+            ->where('is_service_provider', true)
+            ->where('approval_status', 'approved')
+            ->with(['city:id,name', 'skills:id,name'])
+            ->withCount(['services' => fn ($q) => $q->where('is_active', true)->where('approval_status', 'approved')]);
+
+        if ($request->filled('city_id')) {
+            $query->where('city_id', $request->integer('city_id'));
+        }
+
+        if ($request->filled('category_id')) {
+            $categoryId = $request->integer('category_id');
+            $query->whereHas('services', fn ($s) => $s->where('is_active', true)->where('category_id', $categoryId));
+        }
+
+        if ($q = $request->string('q')->toString()) {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('display_name', 'like', '%'.$q.'%')
+                    ->orWhere('introduction', 'like', '%'.$q.'%')
+                    ->orWhereHas('services', fn ($s) => $s->where('is_active', true)->where('title', 'like', '%'.$q.'%'));
+            });
+        }
+
+        return response()->json($query->orderBy('display_name')->paginate(20));
+    }
+
     public function me(Request $request): JsonResponse
     {
         $profile = $request->user()->profile()
             ->with(['city', 'skills'])
             ->first();
+
+        if ($profile) {
+            $this->ensureProfileAvatar($profile);
+        }
 
         return response()->json($profile);
     }
@@ -54,14 +89,78 @@ class ProfileController extends Controller
             $user->update(['role' => 'provider']);
         }
 
+        $this->ensureProfileAvatar($profile);
+
         return response()->json($profile->load(['city', 'skills']));
+    }
+
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:4096'],
+        ]);
+
+        $user = $request->user();
+        $profile = Profile::query()->firstOrCreate(
+            ['user_id' => $user->id],
+            ['display_name' => $user->name],
+        );
+
+        if ($profile->profile_image) {
+            Storage::disk('public')->delete($profile->profile_image);
+        }
+
+        $path = $request->file('image')->store('profiles', 'public');
+        $profile->update(['profile_image' => $path]);
+
+        return response()->json($profile->fresh(['city', 'skills']));
+    }
+
+    private function ensureProfileAvatar(Profile $profile): void
+    {
+        if (! $profile->profile_image) {
+            ProfileAvatarGenerator::assign($profile);
+
+            return;
+        }
+
+        if (ProfileAvatarGenerator::isGeneratedPath($profile->profile_image) && $profile->wasChanged('display_name')) {
+            ProfileAvatarGenerator::assign($profile);
+        }
     }
 
     public function show(Profile $profile): JsonResponse
     {
-        $profile->load(['city', 'skills', 'services' => fn ($q) => $q->where('is_active', true), 'products' => fn ($q) => $q->where('is_active', true)]);
+        abort_unless(
+            $profile->is_service_provider && $profile->approval_status === 'approved',
+            404,
+            'A szolgáltató nem található.',
+        );
+
+        $profile->load([
+            'city',
+            'skills',
+            'services' => fn ($q) => $q
+                ->where('is_active', true)
+                ->where('approval_status', 'approved')
+                ->with(['category:id,name', 'city:id,name'])
+                ->orderBy('title'),
+            'products' => fn ($q) => $q
+                ->where('is_active', true)
+                ->where('approval_status', 'approved')
+                ->with(['category:id,name', 'city:id,name'])
+                ->orderBy('title'),
+        ]);
 
         return response()->json($profile);
+    }
+
+    public function avatar(Profile $profile): StreamedResponse
+    {
+        abort_unless($profile->profile_image, 404);
+        abort_unless(Storage::disk('public')->exists($profile->profile_image), 404);
+
+        return Storage::disk('public')->response($profile->profile_image);
     }
 
     public static function makeSlug(string $title, int $profileId): string

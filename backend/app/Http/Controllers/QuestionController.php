@@ -11,7 +11,7 @@ class QuestionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Question::query()
-            ->with(['user:id,name', 'city:id,name'])
+            ->with(['user:id,name', 'city:id,name', 'category:id,name'])
             ->where('status', 'open');
 
         if ($request->filled('city_id')) {
@@ -35,7 +35,7 @@ class QuestionController extends Controller
             'status' => 'open',
         ]);
 
-        return response()->json($question->load('city'), 201);
+        return response()->json($question->load(['city', 'category:id,name']), 201);
     }
 
     public function storeAnswer(Request $request, Question $question): JsonResponse

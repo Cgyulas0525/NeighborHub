@@ -18,6 +18,7 @@ class Service extends Model
         'price_to',
         'city_id',
         'is_active',
+        'approval_status',
     ];
 
     protected function casts(): array

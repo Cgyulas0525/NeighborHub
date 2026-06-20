@@ -20,6 +20,11 @@ class Question extends Model
         return $this->belongsTo(City::class);
     }
 
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
     public function answers(): HasMany
     {
         return $this->hasMany(Answer::class);

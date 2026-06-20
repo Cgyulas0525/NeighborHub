@@ -18,6 +18,7 @@ class Product extends Model
         'image',
         'city_id',
         'is_active',
+        'approval_status',
     ];
 
     protected function casts(): array

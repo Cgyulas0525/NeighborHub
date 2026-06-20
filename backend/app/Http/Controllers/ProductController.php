@@ -12,7 +12,9 @@ class ProductController extends Controller
     {
         $query = Product::query()
             ->with(['profile.city', 'category', 'city'])
-            ->where('is_active', true);
+            ->where('is_active', true)
+            ->where('approval_status', 'approved')
+            ->whereHas('profile', fn ($p) => $p->where('approval_status', 'approved'));
 
         if ($request->filled('city_id')) {
             $query->where('city_id', $request->integer('city_id'));
@@ -43,11 +45,26 @@ class ProductController extends Controller
 
         $product = $profile->products()->create([
             ...$validated,
+            'city_id' => $validated['city_id'] ?? $profile->city_id,
             'slug' => ProfileController::makeSlug($validated['title'], $profile->id),
             'is_active' => true,
+            'approval_status' => 'pending',
         ]);
 
         return response()->json($product->load(['category', 'city']), 201);
+    }
+
+    public function mine(Request $request): JsonResponse
+    {
+        $profile = $request->user()->profile;
+        abort_unless($profile, 403, 'Előbb hozd létre a profilodat.');
+
+        $products = $profile->products()
+            ->with(['category:id,name', 'city:id,name'])
+            ->latest()
+            ->get();
+
+        return response()->json($products);
     }
 
     public function show(Product $product): JsonResponse

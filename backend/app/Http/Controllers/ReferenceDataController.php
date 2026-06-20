@@ -19,7 +19,10 @@ class ReferenceDataController extends Controller
 
     public function categories(Request $request): JsonResponse
     {
-        $query = Category::query()->where('active', true)->orderBy('name');
+        $query = Category::query()
+            ->where('active', true)
+            ->where('approval_status', 'approved')
+            ->orderBy('name');
         if ($type = $request->string('type')->toString()) {
             $query->where('type', $type);
         }

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\ProfileAvatarGenerator;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -24,9 +26,25 @@ class Profile extends Model
         'approval_status',
     ];
 
+    protected $appends = ['profile_image_url', 'profile_image_generated'];
+
     protected function casts(): array
     {
         return ['is_service_provider' => 'boolean'];
+    }
+
+    protected function profileImageUrl(): Attribute
+    {
+        return Attribute::get(
+            fn () => $this->profile_image ? '/api/profiles/'.$this->id.'/avatar' : null,
+        );
+    }
+
+    protected function profileImageGenerated(): Attribute
+    {
+        return Attribute::get(
+            fn () => ProfileAvatarGenerator::isGeneratedPath($this->profile_image),
+        );
     }
 
     public function user(): BelongsTo
