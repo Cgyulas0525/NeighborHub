@@ -125,8 +125,20 @@ export async function fetchPublicStats() {
   return api('/stats');
 }
 
+export async function fetchRecentActivity() {
+  return api('/recent');
+}
+
 export async function fetchProfile(id) {
   return api(`/profiles/${id}`);
+}
+
+export async function fetchMyProfile() {
+  return api('/profile/me');
+}
+
+export async function updateProfile(data) {
+  return api('/profile/me', { method: 'PUT', body: JSON.stringify(data) });
 }
 
 export async function fetchMyServices() {
@@ -141,8 +153,16 @@ export async function createService(data) {
   return api('/services', { method: 'POST', body: JSON.stringify(data) });
 }
 
+export async function updateService(id, data) {
+  return api(`/services/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
 export async function createProduct(data) {
   return api('/products', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateProduct(id, data) {
+  return api(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 }
 
 export async function deleteService(id) {
@@ -155,4 +175,8 @@ export async function deleteProduct(id) {
 
 export async function createQuestion(data) {
   return api('/questions', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function createAnswer(questionId, data) {
+  return api(`/questions/${questionId}/answers`, { method: 'POST', body: JSON.stringify(data) });
 }

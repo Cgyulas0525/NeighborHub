@@ -26,6 +26,7 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::get('/stats', [PublicStatsController::class, 'index']);
+Route::get('/recent', [PublicStatsController::class, 'recent']);
 Route::get('/providers', [ProfileController::class, 'index']);
 Route::get('/services', [ServiceController::class, 'index']);
 Route::get('/services/{service}', [ServiceController::class, 'show']);

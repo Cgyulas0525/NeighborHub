@@ -129,10 +129,14 @@ class ProfileController extends Controller
         }
     }
 
-    public function show(Profile $profile): JsonResponse
+    public function show(Request $request, Profile $profile): JsonResponse
     {
+        $viewer = $request->user();
+        $isOwner = $viewer && (int) $profile->user_id === (int) $viewer->id;
+        $isAdmin = $viewer && $viewer->isAdmin();
+
         abort_unless(
-            $profile->is_service_provider && $profile->approval_status === 'approved',
+            $profile->is_service_provider && ($profile->approval_status === 'approved' || $isOwner || $isAdmin),
             404,
             'A szolgáltató nem található.',
         );

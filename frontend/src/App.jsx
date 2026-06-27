@@ -54,10 +54,10 @@ export default function App() {
           <Layout user={user} onLogout={handleLogout}>
             <Routes>
               <Route path="/" element={<Home user={user} />} />
-              <Route path="/szolgaltatok" element={<ServicesPage />} />
-              <Route path="/szolgaltatok/:id" element={<ProviderProfilePage />} />
-              <Route path="/termekek" element={<ProductsPage />} />
-              <Route path="/szolgaltatasok" element={<ServiceListingsPage />} />
+              <Route path="/szolgaltatok" element={<ServicesPage user={user} />} />
+              <Route path="/szolgaltatok/:id" element={<ProviderProfilePage user={user} />} />
+              <Route path="/termekek" element={<ProductsPage user={user} />} />
+              <Route path="/szolgaltatasok" element={<ServiceListingsPage user={user} />} />
               <Route path="/kerdesek" element={<QuestionsPage user={user} />} />
               <Route path="/bejelentkezes" element={user ? <Navigate to="/profil" /> : <LoginPage onAuth={setUser} />} />
               <Route path="/regisztracio" element={user ? <Navigate to="/profil" /> : <RegisterPage onAuth={setUser} />} />

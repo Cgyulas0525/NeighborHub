@@ -29,4 +29,9 @@ class Question extends Model
     {
         return $this->hasMany(Answer::class);
     }
+
+    public function rootAnswers(): HasMany
+    {
+        return $this->hasMany(Answer::class)->whereNull('parent_id')->latest();
+    }
 }
